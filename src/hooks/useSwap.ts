@@ -57,18 +57,16 @@ async function getDecimals(mint: string): Promise<number> {
   }
 }
 
-// Browser-safe token account fetching using getParsedTokenAccountsByOwner
 async function fetchWalletTokenAccounts(owner: string) {
   const ownerPk = new PublicKey(owner)
   const [spl, spl2022] = await Promise.all([
     connection.getParsedTokenAccountsByOwner(ownerPk, { programId: TOKEN_PROGRAM_ID }),
     connection.getParsedTokenAccountsByOwner(ownerPk, { programId: TOKEN_2022_PROGRAM_ID }),
   ])
-
   return [...spl.value, ...spl2022.value].map(({ pubkey, account }) => ({
-    mint: account.data.parsed.info.mint as string,
+    mint: (account.data as any).parsed?.info?.mint as string,
     publicKey: pubkey.toBase58(),
-  }))
+  })).filter(a => !!a.mint)
 }
 
 async function getPriorityFee(): Promise<number> {
@@ -90,7 +88,6 @@ export function useSwap() {
   const [quoteAmount, setQuoteAmount] = useState<string>('')
   const [priceImpact, setPriceImpact] = useState<string>('')
   const [route, setRoute] = useState<string>('')
-  const [quoteResponse, setQuoteResponse] = useState<SwapCompute | null>(null)
 
   const getQuote = useCallback(async (
     inputMint: string,
@@ -99,7 +96,7 @@ export function useSwap() {
     slippage = 0.5,
   ) => {
     if (!amountIn || amountIn <= 0) {
-      setQuoteAmount(''); setPriceImpact(''); setRoute(''); setQuoteResponse(null); return
+      setQuoteAmount(''); setPriceImpact(''); setRoute(''); return
     }
     try {
       setLoading(true)
@@ -119,7 +116,6 @@ export function useSwap() {
         return
       }
 
-      setQuoteResponse(data)
       setRoute(data.data.routePlan?.length ? 'Raydium' : 'Direct')
       setPriceImpact(data.data.priceImpactPct.toFixed(2))
       const outAmount = Number(data.data.outputAmount) / Math.pow(10, outputDecimals)
@@ -148,7 +144,6 @@ export function useSwap() {
       const isInputSol = inputMint === WSOL
       const isOutputSol = outputMint === WSOL
 
-      // Fetch wallet token accounts — browser safe
       const tokenAccounts = await fetchWalletTokenAccounts(address)
       const inputTokenAcc = tokenAccounts.find(a => a.mint === inputMint)?.publicKey
       const outputTokenAcc = tokenAccounts.find(a => a.mint === outputMint)?.publicKey
@@ -159,10 +154,8 @@ export function useSwap() {
         return
       }
 
-      // Get priority fee from official endpoint
       const priorityFee = await getPriorityFee()
 
-      // Refresh quote
       const inputDecimals = await getDecimals(inputMint)
       const amountInLamports = Math.floor(amountIn * Math.pow(10, inputDecimals)).toString()
       const quoteUrl = `${API_URLS.SWAP_HOST}/compute/swap-base-in?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountInLamports}&slippageBps=${Math.floor(slippage * 100)}&txVersion=V0&referrer=9wwKxDjJgDv5Cnji6yYzUyG4yRmTWfGJ2hk7L5e5rTQM`
@@ -170,7 +163,6 @@ export function useSwap() {
       const swapResponse: SwapCompute = await quoteRes.json()
       if (!swapResponse.success) { setError('Quote failed'); setLoading(false); return }
 
-      // Build POST body — only include inputAccount/outputAccount when not SOL
       const postBody: Record<string, any> = {
         computeUnitPriceMicroLamports: String(priorityFee),
         swapResponse,
@@ -186,7 +178,6 @@ export function useSwap() {
       if (!isInputSol && inputTokenAcc) postBody.inputAccount = inputTokenAcc
       if (!isOutputSol && outputTokenAcc) postBody.outputAccount = outputTokenAcc
 
-      // Build transaction
       const txRes = await fetch(`${API_URLS.SWAP_HOST}/transaction/swap-base-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,7 +191,6 @@ export function useSwap() {
         return
       }
 
-      // Sign and send
       const provider = walletProvider as any
       const allTx = txData.data.map((tx: any) =>
         VersionedTransaction.deserialize(Buffer.from(tx.transaction, 'base64'))

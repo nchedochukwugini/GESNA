@@ -126,7 +126,6 @@ class GesnaAudio {
       chord.forEach(freq => {
         const osc = this.ctx.createOscillator()
         const gain = this.ctx.createGain()
-        const reverb = this.ctx.createConvolver()
         osc.connect(gain); gain.connect(this.master)
         osc.type = 'sine'
         osc.frequency.value = freq
@@ -438,7 +437,7 @@ export default function Preloader({ onComplete }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ exit: { duration: 1.5 } }}
+          transition={{ duration: 1.5 }}
           onClick={startAudio}
           style={{
             position: 'fixed', inset: 0,

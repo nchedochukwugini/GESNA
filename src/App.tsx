@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Preloader from './components/Preloader'
 import MainApp from './components/MainApp'
 

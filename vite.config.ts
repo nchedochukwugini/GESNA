@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -11,18 +12,31 @@ export default defineConfig({
   resolve: {
     alias: {
       stream: 'stream-browserify',
+      buffer: 'buffer',
     },
   },
   optimizeDeps: {
-    include: ['@solana/web3.js', '@raydium-io/raydium-sdk-v2'],
     esbuildOptions: {
-      target: 'esnext',
+      define: {
+        global: 'globalThis',
+      },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          buffer: true,
+          process: true,
+        }),
+      ],
     },
   },
   build: {
     target: 'esnext',
     commonjsOptions: {
       transformMixedEsModules: true,
+    },
+    rolldownOptions: {
+      output: {
+        codeSplitting: true,
+      },
     },
   },
 })

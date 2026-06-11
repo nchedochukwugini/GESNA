@@ -22,7 +22,8 @@
     "framer-motion": "^12.40.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "stream-browserify": "^3.0.0"
+    "stream-browserify": "^3.0.0",
+    "vite-plugin-node-polyfills": "^0.28.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

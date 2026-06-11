@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@raydium-io/raydium-sdk-v2": "^0.2.41-alpha",
     "@reown/appkit": "^1.8.19",
     "@reown/appkit-adapter-solana": "^1.8.19",
